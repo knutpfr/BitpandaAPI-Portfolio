@@ -1,6 +1,8 @@
-# Bitpanda Portfolio Tracker 📊
 
-![Bitpanda Logo](https://static.bitpanda.com/media/share-image/bitpanda-logo.png)
+# Bitpanda Portfolio Tracker  <img src="https://play-lh.googleusercontent.com/6Szd6rn27xvFo0-iEQbzEUirgIbST1OLsQXJb5U5rphR7nLsNtZ2QrhQs_OjbxEjCg" alt="Bildbeschreibung" width="24" style="border-radius: 50%; overflow: hidden;" />
+
+
+
 
 A lightweight Python application that connects to your Bitpanda account via the official API to provide a comprehensive overview of your crypto and fiat assets.
 
