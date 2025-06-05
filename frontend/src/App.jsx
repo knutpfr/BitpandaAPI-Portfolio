@@ -12,20 +12,43 @@ function App() {
     fetchPortfolioData();
   }, []);
   
-  const fetchPortfolioData = async () => {
+// Manuelles Laden (setzt loading auf true, zeigt "Lade Daten...")
+const fetchPortfolioData = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get('/api/portfolio');
-      console.log('Portfolio-Daten erhalten:', response.data);
-      setPortfolio(response.data);
-      setError(null);
+        setLoading(true);
+        const response = await axios.get('/api/portfolio');
+        setPortfolio(response.data);
+        setError(null);
     } catch (err) {
-      console.error('API-Fehler:', err);
-      setError('Fehler beim Laden der Portfolio-Daten: ' + err.message);
+        setError('Fehler beim Laden der Portfolio-Daten: ' + err.message);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
+
+// Automatisches Laden (setzt loading nicht, UI bleibt erhalten)
+const autoFetchPortfolioData = async () => {
+    try {
+        const response = await axios.get('/api/portfolio');
+        setPortfolio(response.data);
+        setError(null);
+    } catch (err) {
+        setError('Fehler beim Laden der Portfolio-Daten: ' + err.message);
+    }
+    // kein setLoading!
+};
+
+useEffect(() => {
+    // Initiales Laden
+    fetchPortfolioData();
+
+    // Intervall für automatisches Laden
+    const interval = setInterval(() => {
+        autoFetchPortfolioData();
+    }, 60000); // 1 Minute
+
+    return () => clearInterval(interval);
+}, []);
 
   if (loading) {
     return <div className="container">Lade Daten...</div>;
