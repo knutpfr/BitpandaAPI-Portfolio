@@ -211,19 +211,19 @@ h2::before {
 }
 
 .wallet-symbol::before {
-  content: '₿';
+  /* content: '₿'; */
   font-size: 1.5rem;
   opacity: 0.7;
 }
 
 /* Cryptocurrency specific colors */
 .wallet-item[data-symbol="BTC"] .wallet-symbol::before {
-  content: '₿';
+  /* content: '₿'; */
   color: var(--bitcoin-color);
 }
 
 .wallet-item[data-symbol="ETH"] .wallet-symbol::before {
-  content: 'Ξ';
+  /* content: 'Ξ'; */
   color: var(--ethereum-color);
 }
 
