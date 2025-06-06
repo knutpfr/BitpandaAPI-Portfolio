@@ -129,10 +129,17 @@ function App() {
     };
     return icons[symbol] || '🪙';
   };
-  
+    // Prüfen, ob Demo-Modus aktiv ist
+  const isDemoMode = portfolio && portfolio.hasOwnProperty('demo_mode') ? portfolio.demo_mode : false;
   return (
     <div className="container">
       <h1>Bitpanda Portfolio</h1>
+      {/* Demo-Mode Banner */}
+      {isDemoMode && (
+        <div className="demo-banner">
+          🔍 Demo-Modus aktiv - Es werden Beispieldaten angezeigt
+        </div>
+      )}
         {/* Theme Toggle Button */}
       <div className="theme-toggle" onClick={toggleTheme} title={`Zu ${theme === 'dark' ? 'Hell' : 'Dunkel'} wechseln`}>
         {theme === 'dark' ? '☀️' : '🌙'}

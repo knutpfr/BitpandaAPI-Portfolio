@@ -1,6 +1,9 @@
 import os
 import sys
 import requests
+import json
+import random
+from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -29,13 +32,16 @@ load_dotenv(dotenv_path=dotenv_path)
 # Abrufen des API-Schlüssels
 API_KEY = os.getenv("API_KEY")
 
+# Demo-Modus aktivieren, wenn kein API-Schlüssel vorhanden ist
+DEMO_MODE = not API_KEY or API_KEY == "your_api_key_here"
+
 # API-Schlüssel prüfen (ohne ihn zu loggen)
-if API_KEY:
+if API_KEY and not DEMO_MODE:
     logger.info("API-Schlüssel wurde gefunden")
     api_key_masked = API_KEY[:4] + '*' * (len(API_KEY) - 8) + API_KEY[-4:] if len(API_KEY) > 8 else '****'
     logger.info(f"API-Schlüssel (maskiert): {api_key_masked}")
 else:
-    logger.error("API-Schlüssel wurde NICHT gefunden!")
+    logger.info("DEMO-MODUS AKTIV: Es wird mit Beispieldaten gearbeitet!")
 
 # Bitpanda API-Basis-URL
 BASE_URL = "https://api.bitpanda.com/v1"
@@ -46,10 +52,54 @@ headers = {
     "Content-Type": "application/json"
 }
 
+# Demo-Daten für den Demo-Modus
+def generate_demo_data():
+    """
+    Generiert Demo-Daten für den Demo-Modus
+    """
+    # Kryptowährungen mit Demo-Daten
+    crypto_wallets = [
+        {"symbol": "BTC", "balance": random.uniform(0.1, 2.0), "price_eur": random.uniform(45000, 55000)},
+        {"symbol": "ETH", "balance": random.uniform(2.0, 10.0), "price_eur": random.uniform(2000, 3000)},
+        {"symbol": "ADA", "balance": random.uniform(1000, 5000), "price_eur": random.uniform(0.3, 0.6)},
+        {"symbol": "DOT", "balance": random.uniform(100, 500), "price_eur": random.uniform(5, 15)},
+        {"symbol": "LINK", "balance": random.uniform(50, 200), "price_eur": random.uniform(5, 20)},
+    ]
+    
+    # Berechnen des EUR-Wertes und Runden der Zahlen
+    for wallet in crypto_wallets:
+        wallet["balance"] = round(wallet["balance"], 8)
+        wallet["price_eur"] = round(wallet["price_eur"], 2)
+        wallet["balance_eur"] = round(wallet["balance"] * wallet["price_eur"], 2)
+    
+    # Fiat-Wallets mit Demo-Daten
+    fiat_wallets = [
+        {"symbol": "EUR", "balance": random.uniform(1000, 5000)},
+        {"symbol": "USD", "balance": random.uniform(500, 2000)},
+    ]
+    
+    # Runden der Fiat-Zahlen
+    for wallet in fiat_wallets:
+        wallet["balance"] = round(wallet["balance"], 2)
+    
+    # Gesamtwert aller Krypto-Wallets
+    total_value_eur = sum(wallet["balance_eur"] for wallet in crypto_wallets)
+    return {
+        "crypto_wallets": crypto_wallets,
+        "fiat_wallets": fiat_wallets,
+        "total_value_eur": round(total_value_eur, 2),
+        "demo_mode": True
+    }
+
 def get_portfolio_data():
     """
     Ruft die Portfolio-Informationen des Benutzers ab
     """
+    # Demo-Modus: Verwende Beispieldaten
+    if DEMO_MODE:
+        logger.info("Demo-Modus: Generiere Beispieldaten")
+        return generate_demo_data()
+    
     try:
         # Verschiedene Endpunkte für das Portfolio
         endpoints = {
@@ -87,6 +137,12 @@ def get_portfolio_data():
 @app.route('/api/portfolio', methods=['GET'])
 def get_portfolio():
     """API-Endpunkt, der Portfolio-Daten zurückgibt"""
+    # Demo-Modus prüfen
+    if DEMO_MODE:
+        logger.info("Demo-Modus: Portfolio-Daten werden generiert...")
+        demo_data = generate_demo_data()
+        return jsonify(demo_data)
+    
     if not API_KEY:
         logger.error("API_KEY nicht vorhanden!")
         return jsonify({"error": "API-Schlüssel konnte nicht geladen werden"}), 500
@@ -189,8 +245,9 @@ def test_auth():
     """Test-Endpunkt für API-Authentifizierung"""
     test_result = {
         "environment": {
-            "api_key_exists": API_KEY is not None,
-            "api_key_length": len(API_KEY) if API_KEY else 0,
+            "demo_mode": DEMO_MODE,
+            "api_key_exists": API_KEY is not None and not DEMO_MODE,
+            "api_key_length": len(API_KEY) if API_KEY and not DEMO_MODE else 0,
             "working_dir": os.getcwd(),
             "python_version": sys.version,
         }
