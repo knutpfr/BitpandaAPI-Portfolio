@@ -111,10 +111,10 @@ Nach dem Start können Sie auf die Anwendung zugreifen:
 
 ## Bitpanda API-Schlüssel erhalten
 
-1. Besuchen Sie [Bitpanda Pro](https://pro.bitpanda.com/api)
+1. Besuchen Sie [Bitpanda](https://bitpanda.com/)
 2. Melden Sie sich in Ihrem Bitpanda-Konto an
 3. Navigieren Sie zu den API-Einstellungen
-4. Erstellen Sie einen neuen API-Schlüssel
+4. Erstellen Sie einen neuen API-Schlüssel (Scope Guthaben)
 5. Kopieren Sie den Schlüssel in Ihre `.env` Datei
 
 ## Projektstruktur
