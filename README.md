@@ -187,10 +187,6 @@ git-init.bat
 
 Dies initialisiert Git, fügt alle Dateien hinzu und erstellt den ersten Commit.
 
-## Lizenz
-
-Dieses Projekt dient nur zu Bildungszwecken. Bitte beachten Sie die Bitpanda API-Nutzungsbedingungen.
-
 ## Beitragen
 
 1. Fork das Repository
