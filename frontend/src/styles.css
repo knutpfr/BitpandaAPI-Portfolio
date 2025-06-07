@@ -255,7 +255,9 @@ h2::before {
 
 /* Wallet Details */
 .wallet-details {
-  space-y: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .wallet-detail-row {
@@ -388,6 +390,220 @@ h2::before {
   opacity: 0.5;
 }
 
+/* Status Indicator */
+.status-indicator {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.status-indicator.online {
+  border-color: var(--crypto-positive);
+}
+
+.status-indicator.offline {
+  border-color: var(--crypto-negative);
+}
+
+/* Portfolio Chart Styles */
+.portfolio-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.chart-container {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-gradient);
+  transform: scaleX(0);
+  transition: var(--transition);
+}
+
+.chart-container:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+}
+
+.chart-container:hover::before {
+  transform: scaleX(1);
+}
+
+.chart-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-wrapper {
+  width: 100%;
+  max-width: 350px;
+  height: 350px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.chart-legend {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 100%;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chart-stats {
+  margin-top: 1.5rem;
+  text-align: center;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.total-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin-bottom: 0.5rem;
+}
+
+.asset-count {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* GitHub Link */
+.github-link {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.github-link:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+}
+
+.github-link:visited {
+  color: var(--text-secondary);
+}
+
+.github-link:hover:visited {
+  color: var(--text-primary);
+}
+
+.github-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #28a745; /* GitHub Green */
+  animation: pulse-github 2s infinite;
+}
+
+@keyframes pulse-github {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7; 
+    transform: scale(1.1);
+  }
+}
+
+/* Responsive positioning for mobile */
+@media (max-width: 768px) {
+  .status-indicator {
+    bottom: 5rem; /* Mehr Platz für GitHub-Link */
+  }
+  
+  .github-link {
+    bottom: 1rem;
+    left: 1rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-indicator {
+    bottom: 4.5rem;
+  }
+  
+  .github-link {
+    bottom: 0.75rem;
+    left: 0.75rem;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .container {
@@ -411,6 +627,24 @@ h2::before {
   .wallet-item {
     padding: 1rem;
   }
+  
+  .portfolio-charts {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .chart-container {
+    padding: 1.5rem;
+  }
+  
+  .chart-wrapper {
+    max-width: 280px;
+    height: 280px;
+  }
+  
+  .chart-legend {
+    gap: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -429,6 +663,15 @@ h2::before {
   .refresh-button {
     width: 100%;
     margin-top: 1.5rem;
+  }
+  
+  .chart-wrapper {
+    max-width: 250px;
+    height: 250px;
+  }
+  
+  .chart-container {
+    padding: 1rem;
   }
 }
 
@@ -483,40 +726,3 @@ h2::before {
 .wallet-item:nth-child(4) { animation-delay: 0.4s; }
 .wallet-item:nth-child(5) { animation-delay: 0.5s; }
 .wallet-item:nth-child(6) { animation-delay: 0.6s; }
-
-/* Status Indicator */
-.status-indicator {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
-}
-
-.status-indicator.online {
-  border-color: var(--crypto-positive);
-}
-
-.status-indicator.offline {
-  border-color: var(--crypto-negative);
-}
-
-/* Pulse Animation for Theme Toggle */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.theme-toggle.active {
-  animation: pulse 2s infinite;
-}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './styles.css';
 import axios from 'axios';
+import PieChart from './PieChart';
 
 function App() {
   const [portfolio, setPortfolio] = useState(null);
@@ -109,7 +110,6 @@ function App() {
       maximumFractionDigits: 8
     }).format(amount);
   };
-
   // Helper function to get crypto icon
   const getCryptoIcon = (symbol) => {
     const icons = {
@@ -128,6 +128,76 @@ function App() {
       'USD': '$'
     };
     return icons[symbol] || '🪙';
+  };
+
+  // Helper function to get colors for different cryptocurrencies
+  const getCryptoColor = (symbol, alpha = 1) => {
+    const colors = {
+      'BTC': `rgba(247, 147, 26, ${alpha})`,      // Bitcoin Orange
+      'ETH': `rgba(98, 126, 234, ${alpha})`,      // Ethereum Blue
+      'ADA': `rgba(0, 51, 173, ${alpha})`,        // Cardano Blue
+      'DOT': `rgba(230, 1, 122, ${alpha})`,       // Polkadot Pink
+      'LINK': `rgba(43, 109, 255, ${alpha})`,     // Chainlink Blue
+      'LTC': `rgba(191, 191, 191, ${alpha})`,     // Litecoin Silver
+      'XRP': `rgba(35, 37, 53, ${alpha})`,        // XRP Dark
+      'BCH': `rgba(139, 195, 74, ${alpha})`,      // Bitcoin Cash Green
+      'BNB': `rgba(243, 186, 47, ${alpha})`,      // Binance Yellow
+      'USDT': `rgba(80, 175, 149, ${alpha})`,     // Tether Green
+      'USDC': `rgba(42, 122, 255, ${alpha})`,     // USD Coin Blue
+      'EUR': `rgba(0, 212, 170, ${alpha})`,       // Fiat Green
+      'USD': `rgba(0, 184, 153, ${alpha})`,       // Fiat Green (darker)
+    };
+    return colors[symbol] || `rgba(102, 102, 102, ${alpha})`; // Default Gray
+  };
+
+  // Prepare data for crypto portfolio pie chart
+  const prepareCryptoChartData = () => {
+    if (!portfolio || !portfolio.crypto_wallets || portfolio.crypto_wallets.length === 0) {
+      return [];
+    }
+
+    return portfolio.crypto_wallets.map(wallet => ({
+      label: `${getCryptoIcon(wallet.symbol)} ${wallet.symbol}`,
+      value: wallet.balance_eur,
+      color: getCryptoColor(wallet.symbol, 0.8),
+      borderColor: getCryptoColor(wallet.symbol, 1),
+    }));
+  };
+
+  // Prepare data for complete portfolio pie chart (crypto + fiat)
+  const prepareCompletePortfolioData = () => {
+    const data = [];
+
+    // Add crypto wallets
+    if (portfolio && portfolio.crypto_wallets) {
+      portfolio.crypto_wallets.forEach(wallet => {
+        data.push({
+          label: `${getCryptoIcon(wallet.symbol)} ${wallet.symbol}`,
+          value: wallet.balance_eur,
+          color: getCryptoColor(wallet.symbol, 0.8),
+          borderColor: getCryptoColor(wallet.symbol, 1),
+        });
+      });
+    }
+
+    // Add fiat wallets (convert to EUR if needed)
+    if (portfolio && portfolio.fiat_wallets) {
+      portfolio.fiat_wallets.forEach(wallet => {
+        // For demo purposes, assume 1:1 EUR conversion for simplicity
+        // In real implementation, you'd convert USD to EUR using current rates
+        const eurValue = wallet.symbol === 'EUR' ? wallet.balance : 
+                        wallet.symbol === 'USD' ? wallet.balance * 0.85 : wallet.balance;
+        
+        data.push({
+          label: `${getCryptoIcon(wallet.symbol)} ${wallet.symbol}`,
+          value: eurValue,
+          color: getCryptoColor(wallet.symbol, 0.8),
+          borderColor: getCryptoColor(wallet.symbol, 1),
+        });
+      });
+    }
+
+    return data;
   };
     // Prüfen, ob Demo-Modus aktiv ist
   const isDemoMode = portfolio && portfolio.hasOwnProperty('demo_mode') ? portfolio.demo_mode : false;
@@ -221,8 +291,30 @@ function App() {
             <p>Keine Fiat-Wallets mit Guthaben gefunden</p>
           </div>
         )}
+      </section>      {/* Portfolio Visualisierung - Pie Charts */}
+      <section className="section">
+        <h2>📊 Portfolio-Visualisierung</h2>
+        <div className="portfolio-charts">
+          {/* Gesamtes Portfolio Chart (Krypto + Fiat) */}
+          {portfolio && (prepareCryptoChartData().length > 0 || (portfolio.fiat_wallets && portfolio.fiat_wallets.length > 0)) && (
+            <PieChart 
+              data={prepareCompletePortfolioData()} 
+              title="Gesamt-Portfolio"
+              icon="🏦"
+            />
+          )}
+        </div>
+        
+        {/* Fallback wenn keine Daten vorhanden */}
+        {(!portfolio || ((!portfolio.crypto_wallets || portfolio.crypto_wallets.length === 0) && 
+                        (!portfolio.fiat_wallets || portfolio.fiat_wallets.length === 0))) && (
+          <div className="empty-state">
+            <div className="empty-state-icon">📈</div>
+            <p>Keine Portfolio-Daten für Visualisierung verfügbar</p>
+          </div>
+        )}
       </section>
-      
+
       {/* Update Info und Refresh Button */}
       <div style={{textAlign: 'center', marginTop: '2rem'}}>
         {lastUpdate && (
@@ -232,8 +324,7 @@ function App() {
         <button onClick={fetchPortfolioData} className="refresh-button">
           🔄 Portfolio aktualisieren
         </button>
-        
-        {/* Status Indicator */}
+          {/* Status Indicator */}
         <div className={`status-indicator ${portfolio ? 'online' : 'offline'}`}>
           <div style={{
             width: '8px',
@@ -243,6 +334,18 @@ function App() {
           }}></div>
           {portfolio ? 'Verbunden' : 'Getrennt'}
         </div>
+        
+        {/* GitHub Link */}
+        <a 
+          href="https://github.com/knutpfr" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="github-link"
+          title="Besuche mein GitHub Profil"
+        >
+          <div className="github-status-dot"></div>
+          <span>GitHub</span>
+        </a>
       </div>
     </div>
   );
