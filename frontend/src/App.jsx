@@ -291,7 +291,9 @@ function App() {
             <p>Keine Fiat-Wallets mit Guthaben gefunden</p>
           </div>
         )}
-      </section>      {/* Portfolio Visualisierung - Pie Charts */}
+      </section>      
+      
+      {/* Portfolio Visualisierung - Pie Charts */}
       <section className="section">
         <h2>📊 Portfolio-Visualisierung</h2>
         <div className="portfolio-charts">
