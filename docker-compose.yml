@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  bitpanda-portfolio:
+    image: bitpanda-portfolio:production
+    container_name: bitpanda-portfolio
+    ports:
+      - "5000:5000"
+    environment:
+      - API_KEY=${API_KEY:-}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      # Optional: Für Logs oder persistente Daten
+      - ./logs:/app/logs
+    networks:
+      - bitpanda-network
+
+networks:
+  bitpanda-network:
+    driver: bridge
