@@ -5,9 +5,11 @@ import PieChart from './PieChart';
 
 function App() {
   const [portfolio, setPortfolio] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [chartMode, setChartMode] = useState('total'); // 'total', 'crypto', 'fiat'
   const [theme, setTheme] = useState(() => {
     // Theme aus localStorage laden oder Standard "dark"
     return localStorage.getItem('bitpanda-theme') || 'dark';
@@ -53,8 +55,19 @@ function App() {
     }
   };
 
+  // Benutzer-Info laden
+  const fetchUserInfo = async () => {
+    try {
+      const response = await axios.get('/api/user');
+      setUserInfo(response.data);
+    } catch (err) {
+      console.error('User info fetch failed:', err);
+    }
+  };
+
   useEffect(() => {
     // Initiales Laden
+    fetchUserInfo();
     fetchPortfolioData();
 
     // Intervall für automatisches Laden (alle 60 Sekunden)
@@ -149,42 +162,26 @@ function App() {
     };
     return colors[symbol] || `rgba(102, 102, 102, ${alpha})`; // Default Gray
   };
-
-  // Prepare data for crypto portfolio pie chart
+  // Prepare data for crypto pie chart
   const prepareCryptoChartData = () => {
-    if (!portfolio || !portfolio.crypto_wallets || portfolio.crypto_wallets.length === 0) {
-      return [];
-    }
-
-    return portfolio.crypto_wallets.map(wallet => ({
-      label: `${getCryptoIcon(wallet.symbol)} ${wallet.symbol}`,
-      value: wallet.balance_eur,
-      color: getCryptoColor(wallet.symbol, 0.8),
-      borderColor: getCryptoColor(wallet.symbol, 1),
+    if (!portfolio?.assets) return [];
+    
+    return portfolio.assets.map(asset => ({
+      label: `${getCryptoIcon(asset.symbol)} ${asset.symbol}`,
+      value: asset.value,
+      color: getCryptoColor(asset.symbol, 0.8),
+      borderColor: getCryptoColor(asset.symbol, 1),
     }));
   };
 
-  // Prepare data for complete portfolio pie chart (crypto + fiat)
-  const prepareCompletePortfolioData = () => {
+  // Prepare data for fiat-only portfolio pie chart
+  const prepareFiatChartData = () => {
     const data = [];
 
-    // Add crypto wallets
-    if (portfolio && portfolio.crypto_wallets) {
-      portfolio.crypto_wallets.forEach(wallet => {
-        data.push({
-          label: `${getCryptoIcon(wallet.symbol)} ${wallet.symbol}`,
-          value: wallet.balance_eur,
-          color: getCryptoColor(wallet.symbol, 0.8),
-          borderColor: getCryptoColor(wallet.symbol, 1),
-        });
-      });
-    }
-
-    // Add fiat wallets (convert to EUR if needed)
+    // Add fiat wallets
     if (portfolio && portfolio.fiat_wallets) {
       portfolio.fiat_wallets.forEach(wallet => {
-        // For demo purposes, assume 1:1 EUR conversion for simplicity
-        // In real implementation, you'd convert USD to EUR using current rates
+        // Für Demo-Zwecke: USD zu EUR Umrechnung (0.85), sonst 1:1
         const eurValue = wallet.symbol === 'EUR' ? wallet.balance : 
                         wallet.symbol === 'USD' ? wallet.balance * 0.85 : wallet.balance;
         
@@ -199,26 +196,200 @@ function App() {
 
     return data;
   };
-    // Prüfen, ob Demo-Modus aktiv ist
-  const isDemoMode = portfolio && portfolio.hasOwnProperty('demo_mode') ? portfolio.demo_mode : false;
+
+  // Get current chart data based on mode
+  const getCurrentChartData = () => {
+    switch (chartMode) {
+      case 'crypto':
+        return prepareCryptoChartData();
+      case 'fiat':
+        return prepareFiatChartData();
+      case 'total':
+      default:
+        return prepareCompletePortfolioData();
+    }
+  };
+
+  // Get chart title and icon based on mode
+  const getChartTitleAndIcon = () => {
+    switch (chartMode) {
+      case 'crypto':
+        return { title: 'Krypto-Assets', icon: '💰' };
+      case 'fiat':
+        return { title: 'Fiat-Währungen', icon: '🏦' };
+      case 'total':
+      default:
+        return { title: 'Gesamt-Portfolio', icon: '📊' };
+    }
+  };
+
+  // Toggle chart mode with animation
+  const toggleChartMode = () => {
+    const modes = ['total', 'crypto', 'fiat'];
+    const currentIndex = modes.indexOf(chartMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    setChartMode(modes[nextIndex]);
+  };
+
+  // Prepare data for complete portfolio pie chart (crypto + fiat)
+  const prepareCompletePortfolioData = () => {
+    const data = [];
+
+    // Add crypto assets
+    if (portfolio?.assets) {
+      portfolio.assets.forEach(asset => {
+        data.push({
+          label: `${getCryptoIcon(asset.symbol)} ${asset.symbol}`,
+          value: asset.value,
+          color: getCryptoColor(asset.symbol, 0.8),
+          borderColor: getCryptoColor(asset.symbol, 1),
+        });
+      });
+    }
+
+    // Add fiat wallets
+    if (portfolio?.fiat_wallets) {
+      portfolio.fiat_wallets.forEach(wallet => {
+        data.push({
+          label: `${getCryptoIcon(wallet.symbol)} ${wallet.symbol}`,
+          value: wallet.balance,
+          color: getCryptoColor(wallet.symbol, 0.8),
+          borderColor: getCryptoColor(wallet.symbol, 1),
+        });
+      });
+    }
+
+    return data;
+  };// Prüfen, ob Demo-Modus aktiv ist
+  const isDemoMode = (portfolio && portfolio.is_demo) || (userInfo && userInfo.is_demo);
+  
+  // Logout-Funktion
+  const handleLogout = async () => {
+    try {
+      await axios.get('/logout');
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('Logout-Fehler:', err);
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <div className="container">
-      <h1>Bitpanda Portfolio</h1>
+      {/* Header mit Benutzer-Info */}
+      <header className="app-header">
+        <h1>
+          <span className="logo">₿</span> Bitpanda Portfolio
+        </h1>
+        <div className="header-controls">
+          <div className="user-info">
+            {userInfo && (
+              <>
+                <span className="username">👤 {userInfo.username}</span>
+                {isDemoMode && <span className="demo-badge">DEMO</span>}
+              </>
+            )}
+          </div>
+          <div className="theme-toggle" onClick={toggleTheme} title={`Zu ${theme === 'dark' ? 'Hell' : 'Dunkel'} wechseln`}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </div>
+          <button className="logout-btn" onClick={handleLogout} title="Abmelden">
+            🚪 Logout
+          </button>
+        </div>
+      </header>
+
       {/* Demo-Mode Banner */}
       {isDemoMode && (
         <div className="demo-banner">
-          🔍 Demo-Modus aktiv - Es werden Beispieldaten angezeigt
+          🔍 <strong>Demo-Modus aktiv</strong> - Es werden Beispieldaten angezeigt. 
+          <span className="demo-banner-text">Registrieren Sie sich mit einem echten API-Schlüssel für Live-Daten.</span>
         </div>
       )}
-        {/* Theme Toggle Button */}
-      <div className="theme-toggle" onClick={toggleTheme} title={`Zu ${theme === 'dark' ? 'Hell' : 'Dunkel'} wechseln`}>
-        {theme === 'dark' ? '☀️' : '🌙'}
-      </div>
-      
-      {/* Krypto-Wallets Section */}
+        {/* Portfolio Übersicht */}
+      {portfolio && (
+        <section className="portfolio-overview">
+          <div className="portfolio-stats">
+            <div className="stat-card total-value">
+              <div className="stat-icon">💎</div>
+              <div className="stat-content">
+                <h3>Gesamtwert</h3>
+                <p className="stat-value">{formatCurrency(portfolio.total_value)}</p>
+                {portfolio.total_change_24h !== undefined && (
+                  <p className={`stat-change ${portfolio.total_change_24h >= 0 ? 'positive' : 'negative'}`}>
+                    {portfolio.total_change_24h >= 0 ? '📈' : '📉'} 
+                    {formatCurrency(Math.abs(portfolio.total_change_24h))} 
+                    ({portfolio.total_change_24h_percentage >= 0 ? '+' : ''}{portfolio.total_change_24h_percentage?.toFixed(2)}%)
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Krypto-Assets Section */}
       <section className="section">
+        <h2>💰 Krypto-Assets</h2>
+        {portfolio && portfolio.assets && portfolio.assets.length > 0 ? (
+          <>
+            <div className="wallet-list">
+              {portfolio.assets.map((asset, index) => (
+                <div 
+                  className="wallet-item" 
+                  key={index}
+                  data-symbol={asset.symbol}
+                  style={{animationDelay: `${index * 0.1}s`}}
+                >
+                  <div className="wallet-symbol">
+                    {asset.logo_url ? (
+                      <img src={asset.logo_url} alt={asset.symbol} className="crypto-logo" />
+                    ) : (
+                      getCryptoIcon(asset.symbol)
+                    )}
+                    <span>{asset.symbol}</span>
+                    <small className="asset-name">{asset.name}</small>
+                  </div>                  <div className="wallet-details">
+                    <div className="wallet-detail-row">
+                      <span className="wallet-detail-label">Anzahl</span>
+                      <span className="wallet-detail-value">{formatCrypto(asset.amount)} {asset.symbol}</span>
+                    </div>
+                    {asset.current_price && (
+                      <div className="wallet-detail-row">
+                        <span className="wallet-detail-label">Aktueller Preis</span>
+                        <span className="wallet-detail-value">{formatCurrency(asset.current_price)}</span>
+                      </div>
+                    )}
+                    <div className="wallet-detail-row">
+                      <span className="wallet-detail-label">Portfolio-Wert</span>
+                      <span className="wallet-detail-value total-value">{formatCurrency(asset.value)}</span>
+                    </div>
+                    {asset.change_24h !== undefined && (
+                      <div className="wallet-detail-row">
+                        <span className="wallet-detail-label">24h Änderung</span>
+                        <span className={`wallet-detail-value ${asset.change_24h >= 0 ? 'positive' : 'negative'}`}>
+                          {asset.change_24h >= 0 ? '+' : ''}{formatCurrency(asset.change_24h)} 
+                          ({asset.change_24h_percentage >= 0 ? '+' : ''}{asset.change_24h_percentage?.toFixed(2)}%)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : portfolio ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">�</div>
+            <p>Keine Assets mit Guthaben gefunden</p>
+          </div>
+        ) : null}
+      </section>
+
+      {/* Original Krypto-Wallets Section (für Rückwärtskompatibilität) */}
+      {portfolio && portfolio.crypto_wallets && portfolio.crypto_wallets.length > 0 && (
+        <section className="section">
         <h2>💰 Krypto-Wallets</h2>
-        {portfolio && portfolio.crypto_wallets && portfolio.crypto_wallets.length > 0 ? (
           <>
             <div className="wallet-list">
               {portfolio.crypto_wallets.map((wallet, index) => (
@@ -252,70 +423,123 @@ function App() {
               <strong>💎 Gesamtwert Krypto-Portfolio: {formatCurrency(portfolio.total_value_eur)}</strong>
             </div>
           </>
-        ) : (
-          <div className="empty-state">
-            <div className="empty-state-icon">📊</div>
-            <p>Keine Krypto-Wallets mit Guthaben gefunden</p>
-          </div>
-        )}
-      </section>
-      
+        </section>
+      )}
+
       {/* Fiat-Wallets Section */}
-      <section className="section">
-        <h2>🏦 Fiat-Wallets</h2>
-        {portfolio && portfolio.fiat_wallets && portfolio.fiat_wallets.length > 0 ? (
+      {portfolio && portfolio.fiat_wallets && portfolio.fiat_wallets.length > 0 && (
+        <section className="section">
+          <h2>💶 Fiat-Guthaben</h2>
           <div className="wallet-list">
             {portfolio.fiat_wallets.map((wallet, index) => (
               <div 
-                className="wallet-item" 
-                key={index}
-                style={{animationDelay: `${(portfolio.crypto_wallets?.length + index) * 0.1}s`}}
+                className="wallet-item fiat-wallet" 
+                key={`fiat-${index}`}
+                data-symbol={wallet.symbol}
+                style={{animationDelay: `${(portfolio.assets?.length || 0) + index * 0.1}s`}}
               >
                 <div className="wallet-symbol">
-                  {getCryptoIcon(wallet.symbol)} {wallet.symbol}
+                  <span className="crypto-icon">{getCryptoIcon(wallet.symbol)}</span>
+                  <div className="asset-info">
+                    <span className="asset-symbol">{wallet.symbol}</span>
+                    <small className="asset-name">{wallet.name}</small>
+                    <span className="fiat-badge">FIAT</span>
+                  </div>
                 </div>
                 <div className="wallet-details">
                   <div className="wallet-detail-row">
                     <span className="wallet-detail-label">Guthaben</span>
-                    <span className="wallet-detail-value">
-                      {formatCurrency(wallet.balance, wallet.symbol)}
-                    </span>
+                    <span className="wallet-detail-value total">{formatCurrency(wallet.balance, wallet.symbol)}</span>
                   </div>
+                  {wallet.symbol !== 'EUR' && (
+                    <div className="wallet-detail-row">
+                      <span className="wallet-detail-label">In EUR (ca.)</span>
+                      <span className="wallet-detail-value">{formatCurrency(wallet.balance * 0.85)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="empty-state">
-            <div className="empty-state-icon">💳</div>
-            <p>Keine Fiat-Wallets mit Guthaben gefunden</p>
+        </section>
+      )}      {/* Portfolio Visualisierung - Interactive Pie Chart */}
+      {portfolio && (
+        <section className="section chart-section">
+          <div className="chart-header">
+            <h2>📊 Portfolio-Visualisierung</h2>
+            <div className="chart-toggle-container">
+              <button 
+                className={`chart-toggle-btn ${chartMode === 'total' ? 'active' : ''}`}
+                onClick={() => setChartMode('total')}
+                title="Gesamtes Portfolio anzeigen"
+              >
+                📊 Gesamt
+              </button>
+              <button 
+                className={`chart-toggle-btn ${chartMode === 'crypto' ? 'active' : ''}`}
+                onClick={() => setChartMode('crypto')}
+                title="Nur Krypto-Assets anzeigen"
+              >
+                💰 Krypto
+              </button>
+              <button 
+                className={`chart-toggle-btn ${chartMode === 'fiat' ? 'active' : ''}`}
+                onClick={() => setChartMode('fiat')}
+                title="Nur Fiat-Währungen anzeigen"
+              >
+                🏦 Fiat
+              </button>
+            </div>
           </div>
-        )}
-      </section>      
-      
-      {/* Portfolio Visualisierung - Pie Charts */}
-      <section className="section">
-        <h2>📊 Portfolio-Visualisierung</h2>
-        <div className="portfolio-charts">
-          {/* Gesamtes Portfolio Chart (Krypto + Fiat) */}
-          {portfolio && (prepareCryptoChartData().length > 0 || (portfolio.fiat_wallets && portfolio.fiat_wallets.length > 0)) && (
-            <PieChart 
-              data={prepareCompletePortfolioData()} 
-              title="Gesamt-Portfolio"
-              icon="🏦"
-            />
-          )}
-        </div>
-        
-        {/* Fallback wenn keine Daten vorhanden */}
-        {(!portfolio || ((!portfolio.crypto_wallets || portfolio.crypto_wallets.length === 0) && 
-                        (!portfolio.fiat_wallets || portfolio.fiat_wallets.length === 0))) && (
-          <div className="empty-state">
-            <div className="empty-state-icon">📈</div>
-            <p>Keine Portfolio-Daten für Visualisierung verfügbar</p>
+          
+          <div className="portfolio-charts">
+            {/* Dynamic Portfolio Chart */}
+            {getCurrentChartData().length > 0 ? (
+              <div className={`chart-container chart-mode-${chartMode}`} key={chartMode}>
+                <PieChart 
+                  data={getCurrentChartData()} 
+                  title={getChartTitleAndIcon().title}
+                  icon={getChartTitleAndIcon().icon}
+                />
+                {/* <div className="chart-stats"> 
+                  <div className="chart-stat-item">
+                    <span className="chart-stat-label">Assets:</span>
+                    <span className="chart-stat-value">{getCurrentChartData().length}</span>
+                  </div>
+                  <div className="chart-stat-item">
+                    <span className="chart-stat-label">Wert:</span>
+                    <span className="chart-stat-value">
+                      {formatCurrency(getCurrentChartData().reduce((sum, item) => sum + item.value, 0))}
+                    </span>
+                  </div>
+                </div>*/}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  {chartMode === 'crypto' ? '💰' : chartMode === 'fiat' ? '🏦' : '📈'}
+                </div>
+                <p>
+                  {chartMode === 'crypto' 
+                    ? 'Keine Krypto-Assets verfügbar' 
+                    : chartMode === 'fiat' 
+                    ? 'Keine Fiat-Währungen verfügbar'
+                    : 'Keine Portfolio-Daten verfügbar'
+                  }
+                </p>
+                {chartMode !== 'total' && (
+                  <button 
+                    className="chart-toggle-btn secondary"
+                    onClick={() => setChartMode('total')}
+                  >
+                    📊 Gesamtansicht zeigen
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Update Info und Refresh Button */}
       <div style={{textAlign: 'center', marginTop: '2rem'}}>

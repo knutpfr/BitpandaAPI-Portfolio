@@ -95,8 +95,7 @@ class SecureUserDatabase:
                     username TEXT,
                     success BOOLEAN NOT NULL,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+                )            ''')
             
             conn.commit()
             logging.info("Datenbank initialisiert")
@@ -115,8 +114,9 @@ class SecureUserDatabase:
             raise ValueError("Benutzername muss mindestens 3 Zeichen lang sein")
         if len(password) < 8:
             raise ValueError("Passwort muss mindestens 8 Zeichen lang sein")
-        if not api_key or len(api_key) < 10:
-            raise ValueError("Gültiger API-Schlüssel erforderlich")
+        # API-Key für Demo-Modus kann 'DEMO_MODE' sein
+        if not api_key or (api_key != 'DEMO_MODE' and len(api_key) < 10):
+            raise ValueError("Gültiger API-Schlüssel erforderlich oder leer für Demo-Modus")
         
         password_hash = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)
         encrypted_api_key = self._encrypt_api_key(api_key)

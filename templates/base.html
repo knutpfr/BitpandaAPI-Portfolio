@@ -5,8 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
-    <title>{% block title %}Bitpanda Portfolio{% endblock %}</title>
-    <style>
+    <title>{% block title %}Bitpanda Portfolio{% endblock %}</title>    <style>
+        :root {
+            /* Dark Theme Variables - gleich wie React App */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --bg-hover: #333333;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            
+            --accent-primary: #00d4aa;
+            --accent-secondary: #00b899;
+            --accent-gradient: linear-gradient(135deg, #00d4aa, #00b899);
+            
+            --demo-color: #ffcc00;
+            --border-color: #333333;
+            --border-hover: #444444;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,21 +41,41 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background Gradient Animation - gleich wie React App */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(0, 212, 170, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(0, 184, 153, 0.15) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
         }
         
         .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 2.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
+            position: relative;
+            backdrop-filter: blur(10px);
         }
         
         .header {
@@ -37,100 +84,135 @@
         }
         
         .header h1 {
-            color: #333;
-            font-size: 1.8rem;
+            color: var(--text-primary);
+            font-size: 2rem;
+            font-weight: 700;
             margin-bottom: 0.5rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .header p {
-            color: #666;
-            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
         }
-        
-        .form-group {
+          .form-group {
             margin-bottom: 1.5rem;
         }
         
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #333;
+            color: var(--text-primary);
             font-weight: 500;
+            font-size: 0.9rem;
         }
         
         .form-group input {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 0.875rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
             font-size: 1rem;
-            transition: border-color 0.3s;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
         }
         
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.2);
+        }
+
+        .form-help {
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.4;
         }
         
         .btn {
             width: 100%;
-            padding: 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 0.875rem;
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
             border: none;
-            border-radius: 5px;
+            border-radius: var(--radius-md);
             font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
         }
         
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
         
         .btn:active {
             transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .links {
             text-align: center;
             margin-top: 1.5rem;
         }
-        
-        .links a {
-            color: #667eea;
+          .links a {
+            color: var(--accent-primary);
             text-decoration: none;
             font-size: 0.9rem;
+            transition: var(--transition);
         }
         
         .links a:hover {
+            color: var(--accent-secondary);
             text-decoration: underline;
         }
         
         .alert {
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: var(--radius-md);
             font-size: 0.9rem;
+            border: 1px solid;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .alert-error {
-            background-color: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
+            background-color: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.3);
         }
         
         .alert-success {
-            background-color: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
+            background-color: rgba(0, 212, 170, 0.1);
+            color: var(--accent-primary);            border-color: rgba(0, 212, 170, 0.3);
         }
         
         .alert-info {
-            background-color: #eef;
-            color: #33c;
-            border: 1px solid #ccf;
+            background-color: rgba(51, 51, 204, 0.1);
+            color: #3366cc;
+            border-color: rgba(51, 51, 204, 0.3);
         }
         
         .dashboard {

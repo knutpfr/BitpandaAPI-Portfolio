@@ -55,11 +55,10 @@ const PieChart = ({ data, title, icon }) => {
           }
         }
       },
-    },
-    animation: {
+    },    animation: {
       animateRotate: true,
       animateScale: true,
-      duration: 1000,
+      duration: 800,
       easing: 'easeOutQuart'
     },
     elements: {

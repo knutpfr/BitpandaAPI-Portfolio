@@ -21,7 +21,7 @@ class User(UserMixin):
         self.api_key = api_key
 
 # Flask-App-Konfiguration
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/dist', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Sicherheitsheader
@@ -193,19 +193,23 @@ def register():
             
             if not validate_password(password):
                 return jsonify({'error': 'Passwort muss mindestens 8 Zeichen lang sein und Groß-, Kleinbuchstaben und Zahlen enthalten'}), 400
-            
-            if not validate_api_key(api_key):
+              # API-Key Validierung - Leerer Key für Demo-Modus erlaubt
+            if api_key and not validate_api_key(api_key):
                 return jsonify({'error': 'Ungültiger API-Schlüssel'}), 400
             
-            # Benutzer erstellen
+            # Demo-Modus wenn kein API-Key angegeben
+            is_demo = not api_key
+            if is_demo:
+                api_key = 'DEMO_MODE'  # Platzhalter für Demo-Modus
+              # Benutzer erstellen
             db.create_user(username, password, api_key)
             
-            logger.info(f"Neuer Benutzer registriert: {username}")
+            logger.info(f"Neuer Benutzer registriert: {username}, Demo-Modus: {is_demo}")
             
             if request.is_json:
-                return jsonify({'success': True, 'message': 'Benutzer erfolgreich erstellt'})
+                return jsonify({'success': True, 'message': f'Benutzer erfolgreich erstellt! {"Demo-Modus aktiviert." if is_demo else ""}'})
             else:
-                flash('Benutzer erfolgreich erstellt! Sie können sich jetzt anmelden.', 'success')
+                flash(f'Benutzer erfolgreich erstellt! Sie können sich jetzt anmelden. {"Demo-Modus aktiviert." if is_demo else ""}', 'success')
                 return redirect(url_for('login'))
                 
         except ValueError as e:
@@ -220,13 +224,147 @@ def register():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html', username=current_user.username)
+    # React Frontend servieren
+    try:
+        with open('frontend/dist/index.html', 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return html_content
+    except FileNotFoundError:
+        # Fallback auf Development-Version
+        return redirect('/static/index.html')
+
+# Statische Assets für React App
+@app.route('/assets/<path:filename>')
+def react_assets(filename):
+    return app.send_static_file(f'assets/{filename}')
+
+# API Route für Benutzer-Info (für React Frontend)
+@app.route('/api/user')
+@login_required
+def get_user_info():
+    is_demo = current_user.api_key == 'DEMO_MODE'
+    return jsonify({
+        'username': current_user.username,
+        'is_demo': is_demo,
+        'user_id': current_user.id
+    })
 
 @app.route('/api/portfolio')
 @login_required
 def get_portfolio():
-    try:
+    try:        # Demo-Modus Daten mit Random-Werten
+        if current_user.api_key == 'DEMO_MODE':
+            import random
+            
+            # Zufällige Crypto-Preise generieren (basierend auf realistischen Bereichen)
+            btc_price = random.uniform(25000, 35000)
+            eth_price = random.uniform(1400, 1800)
+            ada_price = random.uniform(0.80, 1.20)
+            sol_price = random.uniform(45, 75)
+            
+            # Zufällige Mengen
+            btc_amount = random.uniform(0.1, 0.5)
+            eth_amount = random.uniform(1.5, 3.0)
+            ada_amount = random.uniform(800, 1500)
+            sol_amount = random.uniform(10, 25)
+            
+            # Werte berechnen
+            btc_value = btc_price * btc_amount
+            eth_value = eth_price * eth_amount
+            ada_value = ada_price * ada_amount
+            sol_value = sol_price * sol_amount
+            
+            # Zufällige 24h Änderungen (-10% bis +15%)
+            btc_change_pct = random.uniform(-10, 15)
+            eth_change_pct = random.uniform(-10, 15)
+            ada_change_pct = random.uniform(-10, 15)
+            sol_change_pct = random.uniform(-10, 15)
+            
+            # Absolute Änderungen berechnen
+            btc_change = btc_value * (btc_change_pct / 100)
+            eth_change = eth_value * (eth_change_pct / 100)
+            ada_change = ada_value * (ada_change_pct / 100)
+            sol_change = sol_value * (sol_change_pct / 100)
+            
+            # Fiat-Wallets mit zufälligen Werten
+            eur_balance = random.uniform(500, 3000)
+            usd_balance = random.uniform(1000, 4000)
+            
+            # Gesamtwerte berechnen
+            crypto_total = btc_value + eth_value + ada_value + sol_value
+            fiat_total_eur = eur_balance + (usd_balance * 0.85)  # USD zu EUR
+            total_value = crypto_total + fiat_total_eur
+            total_change = btc_change + eth_change + ada_change + sol_change
+            total_change_pct = (total_change / total_value) * 100 if total_value > 0 else 0
+            
+            demo_portfolio = {
+                'total_value': round(total_value, 2),
+                'total_change_24h': round(total_change, 2),
+                'total_change_24h_percentage': round(total_change_pct, 2),
+                'crypto_total_value': round(crypto_total, 2),
+                'fiat_total_value': round(fiat_total_eur, 2),
+                'assets': [
+                    {
+                        'name': 'Bitcoin',
+                        'symbol': 'BTC',
+                        'amount': round(btc_amount, 4),
+                        'current_price': round(btc_price, 2),
+                        'value': round(btc_value, 2),
+                        'change_24h': round(btc_change, 2),
+                        'change_24h_percentage': round(btc_change_pct, 2),
+                        'logo_url': '/static/crypto-logos/btc.png'
+                    },
+                    {
+                        'name': 'Ethereum',
+                        'symbol': 'ETH', 
+                        'amount': round(eth_amount, 4),
+                        'current_price': round(eth_price, 2),
+                        'value': round(eth_value, 2),
+                        'change_24h': round(eth_change, 2),
+                        'change_24h_percentage': round(eth_change_pct, 2),
+                        'logo_url': '/static/crypto-logos/eth.png'
+                    },
+                    {
+                        'name': 'Cardano',
+                        'symbol': 'ADA',
+                        'amount': round(ada_amount, 2),
+                        'current_price': round(ada_price, 4),
+                        'value': round(ada_value, 2),
+                        'change_24h': round(ada_change, 2),
+                        'change_24h_percentage': round(ada_change_pct, 2),
+                        'logo_url': '/static/crypto-logos/ada.png'
+                    },
+                    {
+                        'name': 'Solana',
+                        'symbol': 'SOL',
+                        'amount': round(sol_amount, 4),
+                        'current_price': round(sol_price, 2),
+                        'value': round(sol_value, 2),
+                        'change_24h': round(sol_change, 2),
+                        'change_24h_percentage': round(sol_change_pct, 2),
+                        'logo_url': '/static/crypto-logos/sol.png'
+                    }
+                ],
+                'fiat_wallets': [
+                    {
+                        'symbol': 'EUR',
+                        'balance': round(eur_balance, 2),
+                        'name': 'Euro'
+                    },
+                    {
+                        'symbol': 'USD', 
+                        'balance': round(usd_balance, 2),
+                        'name': 'US-Dollar'
+                    }
+                ],
+                'last_update': datetime.now().isoformat(),
+                'is_demo': True
+            }
+            return jsonify(demo_portfolio)
+        
+        # Echte API-Daten
         portfolio_data = bitpanda_api.get_portfolio(current_user.api_key)
+        portfolio_data['is_demo'] = False
         return jsonify(portfolio_data)
     except Exception as e:
         logger.error(f"Portfolio-Abruf-Fehler für {current_user.username}: {e}")
