@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Bitpanda Portfolio{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>📊 Portfolio Dashboard</h1>
+        <div class="user-info">
+            <span>Angemeldet als: <strong>{{ username }}</strong></span>
+            <div class="user-menu">
+                <select id="userActions" onchange="handleUserAction(this.value)">
+                    <option value="">Aktionen...</option>
+                    <option value="switch">Benutzer wechseln</option>
+                    <option value="manage">Benutzer verwalten</option>
+                    <option value="logout">Abmelden</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div id="portfolioContent">
+        <div class="loading">
+            <p>📈 Portfolio wird geladen...</p>
+        </div>
+    </div>
+    
+    <!-- Benutzer-Verwaltung Modal -->
+    <div id="userManagementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 10px; max-width: 500px; width: 90%;">
+            <h3>👥 Benutzerverwaltung</h3>
+            <div id="usersList"></div>
+            <div style="margin-top: 1rem;">
+                <button onclick="closeUserManagement()" class="btn" style="width: auto; margin-right: 1rem;">Schließen</button>
+                <a href="{{ url_for('register') }}" class="btn" style="width: auto; display: inline-block; text-decoration: none; text-align: center;">Neuer Benutzer</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let portfolioData = null;
+
+// Portfolio laden
+async function loadPortfolio() {
+    try {
+        const response = await secureRequest('/api/portfolio');
+        portfolioData = response;
+        displayPortfolio(response);
+    } catch (error) {
+        console.error('Portfolio load error:', error);
+        document.getElementById('portfolioContent').innerHTML = `
+            <div class="alert alert-error">
+                ⚠️ Fehler beim Laden des Portfolios: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// Portfolio anzeigen
+function displayPortfolio(data) {
+    const content = document.getElementById('portfolioContent');
+    
+    let html = `
+        <div class="portfolio-grid">
+            <div class="portfolio-card">
+                <h3>💰 Gesamtwert</h3>
+                <div style="font-size: 2rem; font-weight: bold; color: #667eea;">
+                    ${data.total_value_eur.toFixed(2)} EUR
+                </div>
+                <div style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+                    Letzte Aktualisierung: ${new Date(data.last_updated * 1000).toLocaleString('de-DE')}
+                </div>
+            </div>
+        </div>
+        
+        <div class="portfolio-grid">
+    `;
+    
+    // Krypto-Wallets
+    if (data.crypto_wallets && data.crypto_wallets.length > 0) {
+        html += `
+            <div class="portfolio-card">
+                <h3>₿ Krypto-Wallets</h3>
+        `;
+        
+        data.crypto_wallets.forEach(wallet => {
+            html += `
+                <div class="wallet-item">
+                    <span><strong>${wallet.symbol}</strong></span>
+                    <div style="text-align: right;">
+                        <div>${wallet.balance.toFixed(8)}</div>
+                        <div style="color: #666; font-size: 0.9rem;">${wallet.value_eur.toFixed(2)} EUR</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+    }
+    
+    // Fiat-Wallets
+    if (data.fiat_wallets && data.fiat_wallets.length > 0) {
+        html += `
+            <div class="portfolio-card">
+                <h3>💵 Fiat-Wallets</h3>
+        `;
+        
+        data.fiat_wallets.forEach(wallet => {
+            html += `
+                <div class="wallet-item">
+                    <span><strong>${wallet.symbol}</strong></span>
+                    <span>${wallet.balance.toFixed(2)} ${wallet.symbol}</span>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+    }
+    
+    html += `</div>`;
+    
+    // Wenn keine Daten vorhanden
+    if ((!data.crypto_wallets || data.crypto_wallets.length === 0) && 
+        (!data.fiat_wallets || data.fiat_wallets.length === 0)) {
+        html += `
+            <div class="alert alert-info">
+                📭 Keine Wallets mit Guthaben gefunden.
+            </div>
+        `;
+    }
+    
+    content.innerHTML = html;
+}
+
+// Benutzer-Aktionen verarbeiten
+function handleUserAction(action) {
+    const select = document.getElementById('userActions');
+    select.value = ''; // Reset selection
+    
+    switch(action) {
+        case 'switch':
+            if (confirm('Möchten Sie zu einem anderen Benutzer wechseln?')) {
+                window.location.href = '{{ url_for("switch_user") }}';
+            }
+            break;
+        case 'manage':
+            showUserManagement();
+            break;
+        case 'logout':
+            if (confirm('Möchten Sie sich wirklich abmelden?')) {
+                window.location.href = '{{ url_for("logout") }}';
+            }
+            break;
+    }
+}
+
+// Benutzerverwaltung anzeigen
+async function showUserManagement() {
+    try {
+        const users = await secureRequest('/api/users');
+        
+        let html = '<h4>Registrierte Benutzer:</h4>';
+        
+        if (users.length === 0) {
+            html += '<p>Keine anderen Benutzer gefunden.</p>';
+        } else {
+            html += '<div style="max-height: 300px; overflow-y: auto;">';
+            users.forEach(user => {
+                const isCurrentUser = user.username === '{{ username }}';
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid #eee;">
+                        <div>
+                            <strong>${user.username}</strong>
+                            ${isCurrentUser ? ' (Sie)' : ''}
+                            <div style="font-size: 0.8rem; color: #666;">
+                                Erstellt: ${new Date(user.created_at).toLocaleDateString('de-DE')}
+                                ${user.last_login ? '| Letzter Login: ' + new Date(user.last_login).toLocaleDateString('de-DE') : ''}
+                            </div>
+                        </div>
+                        ${!isCurrentUser ? `
+                            <button onclick="deleteUser('${user.username}')" 
+                                    style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 3px; cursor: pointer;">
+                                Löschen
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+        
+        document.getElementById('usersList').innerHTML = html;
+        document.getElementById('userManagementModal').style.display = 'block';
+    } catch (error) {
+        alert('Fehler beim Laden der Benutzerliste: ' + error.message);
+    }
+}
+
+// Benutzer löschen
+async function deleteUser(username) {
+    if (!confirm(`Möchten Sie den Benutzer "${username}" wirklich löschen?`)) {
+        return;
+    }
+    
+    try {
+        const response = await secureRequest(`/api/users/${username}`, {
+            method: 'DELETE'
+        });
+        
+        alert('Benutzer erfolgreich gelöscht!');
+        showUserManagement(); // Liste aktualisieren
+    } catch (error) {
+        alert('Fehler beim Löschen des Benutzers: ' + error.message);
+    }
+}
+
+// Benutzerverwaltung schließen
+function closeUserManagement() {
+    document.getElementById('userManagementModal').style.display = 'none';
+}
+
+// Auto-Refresh des Portfolios
+function startAutoRefresh() {
+    setInterval(() => {
+        loadPortfolio();
+    }, 5 * 60 * 1000); // Alle 5 Minuten
+}
+
+// Beim Laden der Seite
+document.addEventListener('DOMContentLoaded', function() {
+    loadPortfolio();
+    startAutoRefresh();
+});
+
+// Modal schließen bei Klick außerhalb
+document.getElementById('userManagementModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeUserManagement();
+    }
+});
+</script>
+{% endblock %}

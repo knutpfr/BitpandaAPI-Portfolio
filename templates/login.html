@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Anmelden - Bitpanda Portfolio{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🔐 Anmelden</h1>
+        <p>Melden Sie sich mit Ihren Zugangsdaten an</p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form id="loginForm" method="POST">
+        <div class="form-group">
+            <label for="username">Benutzername:</label>
+            <input type="text" id="username" name="username" required 
+                   minlength="3" maxlength="50" pattern="[a-zA-Z0-9_]+"
+                   autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Passwort:</label>
+            <input type="password" id="password" name="password" required 
+                   minlength="8" autocomplete="current-password">
+        </div>
+        
+        <button type="submit" class="btn">Anmelden</button>
+    </form>
+    
+    <div class="links">
+        <a href="{{ url_for('register') }}">Noch kein Konto? Registrieren</a>
+    </div>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitButton = this.querySelector('button[type="submit"]');
+    
+    // Button deaktivieren während der Anfrage
+    submitButton.disabled = true;
+    submitButton.textContent = 'Anmelden...';
+    
+    try {
+        const response = await fetch('{{ url_for("login") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: formData.get('username'),
+                password: formData.get('password')
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.location.href = result.redirect;
+        } else {
+            // Fehler anzeigen
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-error';
+            alertDiv.textContent = result.error || 'Anmeldung fehlgeschlagen';
+            
+            const existingAlert = document.querySelector('.alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+            
+            document.querySelector('.header').after(alertDiv);
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-error';
+        alertDiv.textContent = 'Netzwerk-Fehler. Bitte versuchen Sie es erneut.';
+        
+        const existingAlert = document.querySelector('.alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        document.querySelector('.header').after(alertDiv);
+    } finally {
+        // Button wieder aktivieren
+        submitButton.disabled = false;
+        submitButton.textContent = 'Anmelden';
+    }
+});
+</script>
+{% endblock %}

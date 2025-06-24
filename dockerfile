@@ -1,64 +1,44 @@
-# Multi-stage Dockerfile für Bitpanda Portfolio Viewer
+# Sicheres Docker Build für Bitpanda Portfolio
 
-# Stage 1: Frontend Build
-FROM node:18-alpine AS frontend-build
+FROM python:3.11-slim
 
-WORKDIR /app/frontend
-
-# Package.json kopieren und Dependencies installieren
-COPY frontend/package*.json ./
-RUN npm ci
-
-# Frontend Code kopieren und bauen
-COPY frontend/ ./
-RUN npm run build
-
-# Stage 2: Python Backend
-FROM python:3.11-slim AS backend
-
-# Arbeitsverzeichnis setzen
-WORKDIR /app
-
-# System Dependencies installieren
-RUN apt-get update && apt-get install -y \
-    gcc \
+# Sicherheits-Updates und Dependencies
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y gcc curl \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Python Dependencies installieren
+# Non-root Benutzer erstellen
+RUN groupadd -r appuser && useradd -r -g appuser -m appuser
+
+# Arbeitsverzeichnis
+WORKDIR /app
+
+# Python-Abhängigkeiten installieren
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Backend Code kopieren
-COPY backend/ ./backend/
-COPY main.py ./
+# Backend-Anwendung kopieren
+COPY --chown=appuser:appuser . .
 
-# Frontend Build aus vorheriger Stage kopieren
-COPY --from=frontend-build /app/frontend/dist ./frontend/dist
+# Verzeichnisse für Logs und Datenbank erstellen
+RUN mkdir -p /app/logs /app/data && chown -R appuser:appuser /app
 
-# Port freigeben
+# Zu non-root Benutzer wechseln
+USER appuser
+
+# Umgebungsvariablen für Sicherheit
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Port für Flask-App
 EXPOSE 5000
 
-# Umgebungsvariablen setzen
-ENV FLASK_APP=backend/app.py
-ENV FLASK_ENV=production
-ENV PYTHONPATH=/app
+# Health Check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:5000/health', timeout=5)" || exit 1
 
-# Produktionsserver installieren
-RUN pip install --no-cache-dir gunicorn
-
-# Non-root Benutzer erstellen für Sicherheit
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
-
-# curl für Healthcheck installieren
-USER root
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-USER appuser
-
-# Healthcheck hinzufügen
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:5000/api/health || exit 1
-
-# Anwendung mit Gunicorn starten (Produktionsserver)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "backend.app:app"]
+# Startkommando
+CMD ["python", "app.py"]

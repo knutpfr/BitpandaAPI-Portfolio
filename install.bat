@@ -1,33 +1,51 @@
 @echo off
-echo 🚀 Bitpanda Portfolio Viewer Installation
-echo =========================================
+echo =======================================================
+echo  Bitpanda Portfolio - Sichere Installation
+echo =======================================================
 
-REM Check if .env file exists
-if not exist ".env" (
-    echo ⚠️  .env file nicht gefunden!
-    echo 📝 Erstelle .env aus .env.example...
-    
-    if exist ".env.example" (
-        copy ".env.example" ".env" >nul
-        echo ✅ .env Datei erstellt!        echo 📋 Bitte tragen Sie Ihren Bitpanda API-Schlüssel in die .env Datei ein:
-        echo    API_KEY=ihr_api_schluessel_hier
-        echo.
-    ) else (
-        echo ❌ .env.example nicht gefunden!
-        pause
-        exit /b 1
-    )
+REM Prüfe Docker-Installation
+docker --version >nul 2>&1
+if errorlevel 1 (
+    echo FEHLER: Docker ist nicht installiert oder nicht verfügbar
+    echo Bitte installieren Sie Docker Desktop von https://docker.com
+    pause
+    exit /b 1
 )
 
-REM Install Python dependencies
-echo 📦 Python-Abhängigkeiten installieren...
-pip install -r requirements.txt
+REM Prüfe Docker Compose
+docker-compose --version >nul 2>&1
+if errorlevel 1 (
+    echo FEHLER: Docker Compose ist nicht verfügbar
+    echo Bitte stellen Sie sicher, dass Docker Compose installiert ist
+    pause
+    exit /b 1
+)
 
-REM Install Node.js dependencies
-echo 📦 Frontend-Abhängigkeiten installieren...
-cd frontend
-npm install
-cd ..
+echo Docker erfolgreich gefunden!
+echo.
+
+REM Erstelle .env-Datei falls nicht vorhanden
+if not exist ".env" (
+    echo Erstelle .env-Konfiguration...
+    copy ".env.template" ".env"
+    echo WARNUNG: Bitte bearbeiten Sie die .env-Datei und ändern Sie SECRET_KEY!
+    echo.
+)
+
+REM Erstelle Backup-Verzeichnis
+if not exist "backup" (
+    mkdir backup
+    echo Backup-Verzeichnis erstellt
+)
+
+echo Installation abgeschlossen!
+echo.
+echo Nächste Schritte:
+echo 1. Bearbeiten Sie die .env-Datei und ändern Sie SECRET_KEY
+echo 2. Führen Sie 'start-secure.ps1' in PowerShell aus
+echo 3. Oder verwenden Sie 'docker-compose up -d'
+echo.
+pause
 
 echo.
 echo ✅ Installation abgeschlossen!

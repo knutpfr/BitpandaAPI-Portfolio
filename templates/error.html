@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Fehler {{ error_code }} - Bitpanda Portfolio{% endblock %}
+
+{% block content %}
+<div class="container error-page">
+    <div class="error-code">{{ error_code }}</div>
+    
+    <h2>
+        {% if error_code == 404 %}
+            Seite nicht gefunden
+        {% elif error_code == 500 %}
+            Interner Server-Fehler
+        {% elif error_code == 429 %}
+            Zu viele Anfragen
+        {% else %}
+            Fehler aufgetreten
+        {% endif %}
+    </h2>
+    
+    <p style="color: #666; margin: 1rem 0;">{{ error_message }}</p>
+    
+    <div style="margin-top: 2rem;">
+        <a href="{{ url_for('index') }}" class="btn" style="margin-right: 1rem; display: inline-block; text-decoration: none; width: auto;">
+            🏠 Zur Startseite
+        </a>
+        <button onclick="history.back()" class="btn" style="width: auto; background: #6c757d;">
+            ← Zurück
+        </button>
+    </div>
+</div>
+{% endblock %}

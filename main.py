@@ -1,106 +1,104 @@
-# filepath: c:\Users\Knut\Desktop\Python Bitpanda API\main.py
+# Legacy-Interface für Bitpanda Portfolio (CLI-Modus)
+# Für die neue Webanwendung verwenden Sie: python app.py oder docker-compose up
+
 import os
-import requests
-from dotenv import load_dotenv
+import sys
+from database import SecureUserDatabase
+from bitpanda_api import BitpandaAPI
 
-# Laden der Umgebungsvariablen aus der .env-Datei
-load_dotenv()
+def main():
+    print("🔗 Bitpanda Portfolio - Legacy CLI")
+    print("=" * 50)
+    print("HINWEIS: Dieses CLI-Interface ist veraltet.")
+    print("Verwenden Sie die neue sichere Webanwendung:")
+    print("  1. docker-compose up")
+    print("  2. Browser öffnen: http://localhost")
+    print("=" * 50)
+    
+    choice = input("\nMöchten Sie trotzdem das CLI verwenden? (j/n): ").lower()
+    if choice != 'j':
+        print("Starten Sie die Webanwendung mit: docker-compose up")
+        return
+    
+    # Einfaches CLI für Debug-Zwecke
+    db = SecureUserDatabase()
+    api = BitpandaAPI()
+    
+    while True:
+        print("\n📋 Verfügbare Aktionen:")
+        print("1. Benutzer erstellen")
+        print("2. Benutzer auflisten")
+        print("3. Portfolio anzeigen (erfordert Anmeldung)")
+        print("4. Beenden")
+        
+        choice = input("\nWählen Sie eine Aktion (1-4): ").strip()
+        
+        if choice == '1':
+            create_user_cli(db)
+        elif choice == '2':
+            list_users_cli(db)
+        elif choice == '3':
+            show_portfolio_cli(db, api)
+        elif choice == '4':
+            print("👋 Auf Wiedersehen!")
+            break
+        else:
+            print("❌ Ungültige Auswahl!")
 
-# Abrufen des API-Schlüssels
-API_KEY = os.getenv("API_KEY")
+def create_user_cli(db):
+    print("\n👤 Neuen Benutzer erstellen")
+    try:
+        username = input("Benutzername: ").strip()
+        password = input("Passwort: ").strip()
+        api_key = input("Bitpanda API-Schlüssel: ").strip()
+        
+        db.create_user(username, password, api_key)
+        print(f"✅ Benutzer '{username}' erfolgreich erstellt!")
+        
+    except Exception as e:
+        print(f"❌ Fehler: {e}")
 
-# Überprüfen, ob der API-Schlüssel geladen wurde
-if API_KEY:
-    print("API-Schlüssel erfolgreich geladen!")
-    
-    # Bitpanda API-Basis-URL
-    BASE_URL = "https://api.bitpanda.com/v1"
-    
-    # Header für die API-Anfragen mit dem API-Schlüssel
-    headers = {
-        "X-API-KEY": API_KEY,
-        "Content-Type": "application/json"
-    }
-    
-    def get_portfolio():
-        """
-        Ruft die Portfolio-Informationen des Benutzers ab
-        """
-        try:
-            # Verschiedene Endpunkte für das Portfolio
-            endpoints = {
-                "asset_wallets": "/wallets",
-                "fiat_wallets": "/fiatwallets",
-                "ticker": "/ticker"  # Füge Ticker für Preisdaten hinzu
-            }
-            portfolio_data = {}
-            
-            # Für jeden Endpunkt eine Anfrage senden
-            for key, endpoint in endpoints.items():
-                print(f"Abfrage von {key} mit Endpunkt {endpoint}...")
-                response = requests.get(f"{BASE_URL}{endpoint}", headers=headers)
-                if response.status_code == 200:
-                    portfolio_data[key] = response.json()
-                    print(f"Erfolgreich abgerufen: {key}")
-                else:
-                    print(f"Fehler beim Abrufen von {key}: {response.status_code}")
-                    print(response.text)
-            
-            # Informationen ausgeben
-            print("\n\n==== Bitpanda Portfolio Übersicht ====")
-            
-            # Krypto-Wallets
-            if 'asset_wallets' in portfolio_data and 'data' in portfolio_data['asset_wallets']:
-                print("\nKrypto-Wallets:")
-                wallets_found = False
-                total_eur = 0.0
-                
-                # Ticker-Daten für EUR-Preise abrufen (falls verfügbar)
-                ticker_data = {}
-                if 'ticker' in portfolio_data:
-                    print("\nAktualisiere Preisdaten...\n")
-                    for crypto, prices in portfolio_data['ticker'].items():
-                        if 'EUR' in prices:
-                            ticker_data[crypto] = float(prices['EUR'])
-                
-                for wallet in portfolio_data['asset_wallets']['data']:
-                    balance = float(wallet.get('attributes', {}).get('balance', 0))
-                    if balance > 0:
-                        symbol = wallet.get('attributes', {}).get('cryptocoin_symbol', 'Unbekannt')
-                        
-                        # EUR-Wert aus Ticker-Daten berechnen
-                        price_eur = ticker_data.get(symbol, 0)
-                        balance_eur = balance * price_eur
-                        
-                        # Gesamtwert in EUR aktualisieren
-                        total_eur += balance_eur
-                        
-                        print(f"  {symbol}: {balance} ({balance_eur:.2f} EUR)")
-                        wallets_found = True
-                
-                if wallets_found:
-                    print(f"\n  Gesamtwert aller Krypto-Wallets: {total_eur:.2f} EUR")
-                else:
-                    print("  Keine Krypto-Wallets mit Guthaben gefunden.")
-            
-            # Fiat-Wallets
-            if 'fiat_wallets' in portfolio_data and 'data' in portfolio_data['fiat_wallets']:
-                print("\nFiat-Wallets:")
-                wallets_found = False
-                for wallet in portfolio_data['fiat_wallets']['data']:
-                    if float(wallet.get('attributes', {}).get('balance', 0)) > 0:
-                        print(f"  {wallet.get('attributes', {}).get('fiat_symbol', 'Unbekannt')}: {wallet.get('attributes', {}).get('balance', '0')} {wallet.get('attributes', {}).get('fiat_symbol', 'Unbekannt')}")
-                        wallets_found = True
-                if not wallets_found:
-                    print("  Keine Fiat-Wallets mit Guthaben gefunden.")
-            
-            return portfolio_data
-        except Exception as e:
-            print(f"Fehler beim Abrufen des Portfolios: {e}")
-            return None
-    
-    # Portfolio abrufen
-    portfolio = get_portfolio()
-    
-else:
-    print("Fehler: API-Schlüssel konnte nicht geladen werden. Bitte überprüfen Sie Ihre .env-Datei.")
+def list_users_cli(db):
+    print("\n👥 Registrierte Benutzer:")
+    try:
+        users = db.list_users()
+        if not users:
+            print("Keine Benutzer gefunden.")
+        else:
+            for user in users:
+                print(f"  - {user['username']} (erstellt: {user['created_at']})")
+    except Exception as e:
+        print(f"❌ Fehler: {e}")
+
+def show_portfolio_cli(db, api):
+    print("\n🔐 Anmeldung erforderlich")
+    try:
+        username = input("Benutzername: ").strip()
+        password = input("Passwort: ").strip()
+        
+        # Vereinfachte Authentifizierung für CLI
+        auth_result = db.authenticate_user(username, password, "127.0.0.1", "CLI")
+        
+        print(f"\n📊 Portfolio für {username}:")
+        portfolio = api.get_portfolio(auth_result['api_key'])
+        
+        print(f"💰 Gesamtwert: {portfolio['total_value_eur']:.2f} EUR")
+        
+        if portfolio['crypto_wallets']:
+            print("\n₿ Krypto-Wallets:")
+            for wallet in portfolio['crypto_wallets']:
+                print(f"  {wallet['symbol']}: {wallet['balance']:.8f} ({wallet['value_eur']:.2f} EUR)")
+        
+        if portfolio['fiat_wallets']:
+            print("\n💵 Fiat-Wallets:")
+            for wallet in portfolio['fiat_wallets']:
+                print(f"  {wallet['symbol']}: {wallet['balance']:.2f}")
+        
+        # Session wieder abmelden
+        db.logout_user(auth_result['session_id'])
+        
+    except Exception as e:
+        print(f"❌ Fehler: {e}")
+
+if __name__ == "__main__":
+    main()
